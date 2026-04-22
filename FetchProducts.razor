@@ -1,0 +1,79 @@
+@page "/fetchproducts"
+@inject IHttpClientFactory HttpClientFactory
+
+<h3>Product List</h3>
+
+@if (products == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!products.Any())
+{
+    <p>No products available.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Price ($)</th>
+                <th>Stock</th>
+                <th>Category</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var product in products)
+            {
+                <tr>
+                    <td>@product.Name</td>
+                    <td>@product.Price.ToString("F2")</td> <!-- Format price -->
+                    <td>@product.Stock</td>
+                    <td>@product.Category?.Name</td> <!-- Safe navigation -->
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    // Holds API data
+    private List<Product>? products;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // ✅ Use named HttpClient instead of hardcoding URL
+            var client = HttpClientFactory.CreateClient("ApiClient");
+
+            // Fetch data from API
+            products = await client.GetFromJsonAsync<List<Product>>("http://localhost:5137/api/products");
+        }
+        catch (Exception ex)
+        {
+            // Basic error logging
+            Console.WriteLine($"Error fetching products: {ex.Message}");
+            products = new List<Product>(); // Prevent null issues
+        }
+    }
+
+    // ✅ Strongly typed model (better than anonymous objects)
+    public class Product
+    {
+        public int Id { get; set; }
+        public string? Name { get; set; }
+
+        // Use decimal for currency (avoids floating-point errors)
+        public decimal Price { get; set; }
+
+        public int Stock { get; set; }
+        public Category? Category { get; set; }
+    }
+
+    public class Category
+    {
+        public int Id { get; set; }
+        public string? Name { get; set; }
+    }
+}
